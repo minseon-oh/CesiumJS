@@ -1,0 +1,37 @@
+<!DOCTYPE HTML>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>Cesium TEST</title>
+
+    <link  type='text/css' rel='stylesheet' href='../Cesium/Widgets/widgets.css'/>
+    <script src="../jquery-3.6.0.js"></script>
+    <script src="../Cesium/Cesium.js"></script>
+
+	<style>
+		body {margin: 0;}
+		#mapContainer {position: absolute; width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }	
+	</style>
+
+    <script>
+        $(document).ready(function(){
+            const viewer = new Cesium.Viewer("mapContainer", {
+                imageryProvider: new Cesium.WebMapTileServiceImageryProvider({
+                    url : 'http://mt1.google.com/vt/lyrs=m&x={TileCol}&y={TileRow}&z={TileMatrix}',
+                    layer : 'Satellite',
+                    style : 'default',
+                    maximumLevel: 19,
+                    tileMatrixSetID : 0,
+                })
+            });
+
+            // 대한민국 위치 set
+            viewer.camera.setView({destination: Cesium.Cartesian3.fromDegrees(127, 36.5, 1000000)});
+        });
+    </script>
+
+</head>
+<body>
+    <div id="mapContainer"></div>
+</body>
+</html>
