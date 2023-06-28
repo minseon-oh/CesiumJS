@@ -1,0 +1,132 @@
+<!DOCTYPE HTML>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>Cesium TEST</title>
+
+    <link  type='text/css' rel='stylesheet' href='../Cesium/Widgets/widgets.css'/>
+    <script src="../jquery-3.6.0.js"></script>
+    <script src="../Cesium/Cesium.js"></script>
+
+	<style>
+		body {margin: 0;}
+		#mapContainer {position: absolute; width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }	
+        .btn {background: #333; color: white;}
+    </style>
+
+    <script>
+        let viewer;
+        let handler;
+        $(document).ready(function(){
+            viewer = new Cesium.Viewer("mapContainer", {
+                imageryProvider: new Cesium.WebMapTileServiceImageryProvider({
+                    url : 'http://mt1.google.com/vt/lyrs=m&x={TileCol}&y={TileRow}&z={TileMatrix}',
+                    layer : 'Satellite',
+                    style : 'default',
+                    maximumLevel: 19,
+                    tileMatrixSetID : 0,
+                })
+            });
+
+            // 대한민국 위치 set
+            viewer.camera.setView({destination: Cesium.Cartesian3.fromDegrees(127, 36.5, 1000000)});
+
+            // 툴바 숨김
+            $('.cesium-viewer-toolbar').hide();
+        });
+
+        function draw(param){
+            if(Cesium.defined(handler)) {
+                handler.destroy();
+                handler = null;
+            }
+
+            let entity;
+            switch (param.toLowerCase()) {
+                case "point":
+                    entity = viewer.entities.add({
+                        name: "Entity Point " + viewer.entities.values.length,
+                        point: {
+                            pixelSize: 5,
+                            color: Cesium.Color.RED,
+                            outlineColor: Cesium.Color.WHITE,
+                            outlineWidth: 2,
+                            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                            clampToGround: true,
+                        },
+                    });
+                    break;
+                
+                case "polyline":
+                    entity = viewer.entities.add({
+                        name: "Entity Polyline " + viewer.entities.values.length,
+                        polyline: {
+                            positions: new DynamicProperty([]),
+                            width: 3,
+                            material: Cesium.Color.RED,
+                            clampToGround: true,
+                        },
+                    });
+                    break;
+
+                case "polygon":
+                    entity = viewer.entities.add({
+                        name: "Entity Polygon " + viewer.entities.values.length,
+                        polygon: {
+                            hierarchy: new Cesium.PolygonHierarchy([]),
+                            material: Cesium.Color.fromAlpha(Cesium.Color.RED, 0.5),
+                            show: true,
+                        },
+                    });
+                    break;
+
+                case "circle":
+                    entity = viewer.entities.add({
+                        name: "Entity Circle " + viewer.entities.values.length,
+                        position: new DynamicProperty(Cesium.Cartesian3.fromDegrees(0, 0)),
+                        ellipse: {
+                            semiMinorAxis: 0.01,
+                            semiMajorAxis: 0.01,
+                            material: Cesium.Color.RED.withAlpha(0.5),
+                        },
+                    });
+                    break;
+                
+                default:
+                    break;
+            }
+
+            setHandler(entity);
+        }
+
+        function setHandler(entity){
+            handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+            handler.setInputAction(function (movement) {
+                let ray = viewer.camera.getPickRay(movement.position);
+                let cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+                let pickPosition = viewer.scene.pickPosition(movement.position);
+
+                if (cartesian) {
+                    if (entity.point) {
+                        entity.position = cartesian;
+                        handler.destroy();
+                        handler = undefined;
+                        viewer.scene.render();
+                    } 
+                }
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        }
+    </script>
+
+</head>
+<body>
+    <div id="mapContainer"></div>
+    <div style="position: absolute; padding: 10px;">
+        <button class="btn" onclick="draw('point');">Point</button>
+        <button class="btn" onclick="draw('polyline');">Polyline</button>
+        <button class="btn" onclick="draw('polygon');">Polygon</button>
+        <button class="btn" onclick="draw('circle');">Draw Circle</button>
+     </div>
+</body>
+</html>
