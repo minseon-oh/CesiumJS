@@ -61,7 +61,7 @@
                     entity = viewer.entities.add({
                         name: "Entity Polyline " + viewer.entities.values.length,
                         polyline: {
-                            positions: new DynamicProperty([]),
+                            positions: Cesium.Cartesian3.fromDegreesArray([0.0, 0.0]),
                             width: 3,
                             material: Cesium.Color.RED,
                             clampToGround: true,
@@ -75,7 +75,6 @@
                         polygon: {
                             hierarchy: new Cesium.PolygonHierarchy([]),
                             material: Cesium.Color.fromAlpha(Cesium.Color.RED, 0.5),
-                            show: true,
                         },
                     });
                     break;
@@ -83,7 +82,6 @@
                 case "circle":
                     entity = viewer.entities.add({
                         name: "Entity Circle " + viewer.entities.values.length,
-                        position: new DynamicProperty(Cesium.Cartesian3.fromDegrees(0, 0)),
                         ellipse: {
                             semiMinorAxis: 0.01,
                             semiMajorAxis: 0.01,
@@ -112,10 +110,63 @@
                         entity.position = cartesian;
                         handler.destroy();
                         handler = undefined;
-                        viewer.scene.render();
-                    } 
+                    } else if (entity.ellipse) {
+                        if (!Cesium.defined(entity.position)) {
+                            entity.position = cartesian;
+                        } else {
+                            let dist = Cesium.Cartesian3.distance(cartesian, entity.position._value);
+
+                            entity.ellipse.semiMajorAxis = dist;
+                            entity.ellipse.semiMinorAxis = dist;
+
+                            handler.destroy();
+                            handler = undefined;
+                        }
+                    } else {
+                        let positions;
+                        if (entity.polyline) {
+                            positions = entity.polyline.positions._value;
+                            entity.polyline.show = true;
+                            // 폴리라인 생성시 주어진 좌표값 [0.0, 0.0]을 제거
+                            if (!Cesium.defined(entity.pop)) {
+                                positions.pop();
+                                entity.pop = true;
+                            }
+                        } else {
+                            positions = entity.polygon.hierarchy._value.positions;
+                            entity.polygon.show = true;
+                        }
+                        positions.push(cartesian);
+                    }
+
+                    viewer.scene.render();
                 }
             }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+            handler.setInputAction(function (movement) {
+                if (movement.endPosition) {
+                    let ray = viewer.camera.getPickRay(movement.endPosition);
+                    let cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+                    let pickPosition = viewer.scene.pickPosition(movement.endPosition);
+
+                    if (cartesian) {
+                        if (entity.ellipse) {
+                            let dist = Cesium.Cartesian3.distance(cartesian, entity.position._value);
+                            entity.ellipse.semiMajorAxis = dist;
+                            entity.ellipse.semiMinorAxis = dist;
+                        }
+                    }
+                }
+            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+            handler.setInputAction(function (movement) {
+                if (entity.polyline || entity.polygon) {
+                    handler.destroy();
+                    handler = undefined;
+    
+                    viewer.scene.render();
+                }
+            }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
         }
     </script>
 
@@ -126,7 +177,7 @@
         <button class="btn" onclick="draw('point');">Point</button>
         <button class="btn" onclick="draw('polyline');">Polyline</button>
         <button class="btn" onclick="draw('polygon');">Polygon</button>
-        <button class="btn" onclick="draw('circle');">Draw Circle</button>
+        <button class="btn" onclick="draw('circle');">Circle</button>
      </div>
 </body>
 </html>
